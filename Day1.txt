@@ -1,0 +1,264 @@
+Why nosql ?
+-- sql queries complex; joins are costlier; joins --performance
+-- unstructured data -- images, videos, audio
+-- big data
+-- open source 
+-- big community
+-- scalability 
+   horizontal and vertical scaling
+   vertical scaling -- increasing the hardware
+   horizontal scaling -- increasing the number of servers 
+   Amazon -- 
+		normal day- 1 crore -- 10 servers
+		amazon prime day sale -- 5 days -- 10 crore - 30 servers
+		After the amazon -- scale down -- 10 servers
+
+     Scenario 1:Vertical scaling :
+			 Increase the CPU, memory of single server
+			DisAdv: Single point of failure
+						Cost is more
+
+			Adv: No need for any sync
+
+     Scenario 2: Horizontal scaling:
+				Multiple servers -- read/writes
+			Adv: One of servers fail, there are multiple servers to handle the reads/ writes
+				Cost effective : normal configuration
+				Load is shared
+				Scaling up and scaling down				
+
+			Disadv : SYnc is imp, consistency
+
+Oracle --RDMS -- vertical; horizontal scaling
+
+-- Sharding 
+-- Schemaless -- dynamic schema
+RDBMS -- rigid structure -- fixed number of columns for each record in table
+
+
+create table emp(
+empId integer primary key,
+empName varchar2(20) not null,
+salary integer not null
+)
+
+username.tablename
+
+Mongodb:
+Role based access control :
+
+User : credentails:username, password, authentication db
+
+User: Admin1; authenticationdb : capgeminiDb
+Roles: CRUD on rpsDb;
+
+
+Collections: databasename.collectionname
+rpsDb.book
+
+json object
+var obj ={empId:101,empName:"sara",salary:5678}
+{empId:102,salary:678}
+{empId:103, empName:"siddhanth"}
+
+2 tables:
+Emp : empId,empName,salary
+Emp_Hobbies: empId, hobby; (composite primary key)
+
+All the info of an emp -- perform a join -- not advisable
+
+nosql -- semi structured data -- array : list of hobbies
+
+-- Replication built in -- very simple 
+Same data stored(replicated) in multiple servers 
+why ? 1. Availability 24/7. 2. Recovery 3. backup 4. 
+limitation : 1.Updation/ deletion; SYNC   2. Memory-- consumption is more 3. More I/O operations: syncing of logs  
+
+can impose some constraints -- dynamic schema
+
+RDMS : ACID properties: Transcation: 
+
+nosql : CAP theorem : Any db can only adhere to 2 of 3 principles
+ C - consistensy
+ A - Availability
+ P - Partitition tolerance 
+
+No-sql : 4 types:
+Document
+Column based
+graph based
+key value based
+
+Mongodb:
+Features:
+-- Document based database:
+-- BSON structure -- Json structure + additional types
+Record -- document -- BSON structure
+number, array,string,boolean,object; ObjectId,null,undefined, int32, decimal 
+
+-- Aggregation pipeline:
+Stages ; o/p of first stage becomes the input for the second stage
+
+-- Replication
+Same data is stored across multiple servers
+
+-- Sharding 
+Break up the data and store it in multiple servers
+
+-- Authentication, Authorisation
+
+-- Open source,
+
+-- Community version, Enterprise, Cloud
+
+-- Tools -- Device drivers, Ops Manager 
+
+Create the database
+
+use capgeminiDb
+
+Create the collection(table):
+1.Insert a document
+2.db.createCollection()
+
+
+Insert a document
+insert() -- deprecated
+insertOne() -- insert a single doc
+insertMany() -- insert multiple docs
+
+
+
+db.collname.insert({empId:101,empName:"sara"})
+
+_id:
+-- Work like the primary key
+-- auto generated
+-- ObjectId -- hexadecimal value -- based on timestamp, machine id, process id, counter
+-- can also insert _id
+-- can be a number,string, boolean,ObjectId but not an array
+-- whenever the coll is created, by default, a unique index  on field on _id  field with the name _id_ 
+-- _id does not allow duplicates because of index
+-- Can the unique index on _id be dropped -- NO
+-- Index can be dropped implicitly when the collection is dropped
+
+Why indexes: queries can be faster
+
+10 crore employees
+
+salary -- 5000
+
+collection scan -- 10 crore docs ; 1 ms; 10 crore ms;
+
+Index on salary: 
+salary 5000 --- positions from the index -- 500 emp
+doc scanned -- 500 emp ; 500 ms
+
+
+db.employee.insertMany(
+[
+{empId:110,empName:"Geeta",_id:110},
+{empId:111,empName:"Seeta",_id:105},
+{empId:112,empName:"Preeta",_id:112}
+]
+)
+
+Number of docs inserted :  1 
+Mongodb -- No rollback 
+
+Find:
+
+--select * from employee -- all the docs with all the fields
+db.employee.find()
+
+Restrict number of rows: where condition
+
+Relational operators
+Equality:
+
+select * from emp where empId=105
+db.employee.find({empId:105})
+
+<,>,<=,>=,!=,=
+ select * from emp where salary < 5000
+db.employee.find({salary:{$lt:5000}})
+
+db.employee.find({salary:{$gt:5000}})
+
+db.employee.find({salary:{$lte:5000}})
+
+db.employee.find({salary:{$gte:5000}})
+
+db.employee.find({salary:{$ne:5000}})
+
+db.employee.find({salary:{$eq:5000}})
+
+
+20 docs ; 5 docs for which salary =5000; 2 docs with no salary field
+Not equal to : Negation of equal to
+$ne operator: 
+1. Get all doc which satisfy the condn eq to 5000 -- 5 docs 
+2. Get all the docs other than the 5 docs -- 15 docs(include the 2 docs for which salary is not there)
+
+
+Logical operators: And, or ,not
+select * from employee where empId <105 and salary >5000
+
+db.employee.find({
+$and:[
+{empId: {$lt:105}},
+{salary:{$gt:5000}}
+]
+})
+
+Or:
+select * from employee where empId <105 or salary >5000
+db.employee.find({
+$or:[
+{empId: {$lte:105}},
+{salary:{$gte:5000}}
+]
+}
+)
+
+Not:
+db.employee.find({
+empId:{$not:{$lt:105}}
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		
+		
+		
