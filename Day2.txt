@@ -1,0 +1,322 @@
+Special operators: find()
+
+select * from employee where empId in (101,103,105)
+
+db.employee.find({
+$or:[{empId:101},{empId:103},{empId:105}]
+})
+
+db.employee.find({
+empId:{$in:[101,103,105]}
+})
+
+https://github.com/anjumunoth/capgemini-mongodb
+
+Special operators: find()
+
+select * from employee where empId in (101,103,105)
+
+db.employee.find({
+$or:[{empId:101},{empId:103},{empId:105}]
+})
+
+db.employee.find({
+empId:{$in:[101,103,105]}
+})
+
+$nin
+db.employee.find({
+empId:{$nin:[101,103,105]}
+})
+
+
+select * from employee where salary between 5000 and 10000
+db.employee.find({
+$and:[{salary:{$lt:10000}},{salary:{$gt:5000}}]
+})
+
+db.employee.find({
+salary:{$gt:5000,$lt:10000}
+})
+
+Pattern matching: 
+Pattern : //
+Modifiers: i -- ignore case, g- global match, m
+
+Regular expression using java script expression
+
+Restrict the number of columns
+
+select empId from employee
+db.employee.find({},{empId:1})
+
+
+Exact match:
+db.employee.find({hobbies:["trekking"]})
+
+db.employee.find({hobbies:["dancing","gardening"]})
+
+ Search for some of elements: $all:
+db.employee.find({hobbies:{$all:["dancing","gardening"]}})
+
+Docs for which hobbies exists:
+db.employee.find({hobbies:{$exists:true}})
+
+Positional operator : $
+db.employee.find({hobbies:{$all:[/d/i]}},{"hobbies.$":1})
+
+Array index:
+db.employee.find({"hobbies.0":"trekking"})
+
+Sort:
+Asc or desc
+Single field/ multiple fields
+Order of fields is very important
+
+db.employee.find({}).sort({salary:1}) // asc order of salary
+
+db.employee.find({}).sort({salary:-1}) // desc order of salary
+
+
+Asc order:
+Non existent fields doc;doc with null values for salary; asc order
+
+Desc order:
+desc order; Non existent fields doc;doc with null values for salary;
+
+
+Same salary : order of insertion
+
+Sort on multiple fields:
+db.employee.find().sort({empName:1,salary:-1})
+
+db.employee.find().sort({salary:-1,empName:1})
+
+
+LIMIT and SKIP and count
+
+db.employee.find({salary:{$gt:5000}}).count()
+
+db.employee.find({salary:{$gt:5000}}) -- will return 9 docs
+
+db.employee.find({salary:{$gt:5000}}).limit(5) -- will return 5 top docs on basis of insertion
+
+db.employee.find({salary:{$gt:5000}}).skip(5) -- will skip first 5 docs and return the remaining docs
+
+Employees which have the top 5 salaries
+
+db.employee.find().sort({salary:-1}).limit(5)
+
+Total number of docs: 15 docs (101,115)
+db.employee.find().skip(5).limit(5)//5 (106-110);
+db.employee.find().limit(5).skip(5)// 5(106-110) 
+
+Update op:
+
+updateOne
+updateMany
+
+Matching Number of docs; Number of docs updated
+db.employee.updateOne({filter condition},{how to update})
+
+db.employee.updateOne({empId:101},{$set:{salary:1000}})
+Matching Number of docs:1; Number of docs updated:1
+
+db.employee.updateOne({empId:{$gt:105}},{$set:{salary:1000}})
+Matching Number of docs:1; Number of docs updated:1
+First doc which satisfies the filter condition
+
+
+Add a new field, update a field:
+db.employee.updateOne({empId:101},{$set:{deptId:"d1"}})
+
+Remove a field: 
+db.employee.updateOne({empId:101},{$unset:{deptId:1}})
+
+select * from employee set salary=salary+1000
+db.employee.updateOne({empId:101},{$inc:{salary:1000}})
+
+
+db.employee.updateOne({empId:101},{$inc:{salary:-1000}})
+
+select * from employee set bonus=salary*.3
+
+$set, $unset, $inc, $mul,$max,$min, $currentDate
+
+Array updation operators:
+
+Add an array: to an existing doc:
+
+db.employee.updateOne({empId:102},{$push:{hobby:"h1"}})
+
+Add multiple elements:
+db.employee.updateOne({empId:102},{$push:{hobbies:{$each:["h2","h3","h4"]}}})
+
+
+$position should always be with $each
+
+Add an element at a specific position:
+db.employee.updateOne({empId:102},
+{
+	$push:{
+  	hobbies:{
+    	$each:["h5"],
+      $position:0
+      }
+    }
+  })
+
+
+db.employee.updateOne({empId:102},
+{
+	$push:{
+  	hobbies:{
+    	$each:["h11"],
+      $position:-2
+      }
+    }
+  })
+  
+  Restrict the size of array to 6 elements: $slice:
+  
+  $slice should always be used with $each
+db.employee.updateOne({empId:102},
+{
+	$push:{
+  	hobbies:{
+    	$each:["h11"],
+      $slice:6
+      }
+    }
+  })
+  
+
+Add an element  h13,h14,h15 at 3rd position and restrict my array size to 5
+db.employee.updateOne({empId:102},
+{
+	$push:{
+  	hobbies:{
+    	$each:["h13","h14","h15"],
+      $position:2,
+      $slice:5
+      }
+    }
+  })
+  
+  
+  Sort the elements of the array:
+  
+  db.employee.updateOne({empId:102},
+{
+	$push:{
+  	hobbies:{
+    	$each:[],
+      $sort:1
+      }
+    }
+  })
+  
+
+Remove a element from the array $pop
+
+db.employee.updateOne({empId:102},{$pop:{hobbies:1}});// remove the last element
+
+db.employee.updateOne({empId:102},{$pop:{hobbies:-1}});// remove the first element
+
+Remove an element based on  a condition:
+db.employee.updateOne({empId:102},{$pull:{hobbies:"h2"}});// remove the element(s) which satisfies the array condition
+
+
+$ -- positional operator:
+First parameter should be a condition on array
+db.employee.find({hobbies:/^d/},{"hobbies.$":1});// will nor print the entire array; only print the array element which satisfied the condition
+
+db.employee.updateOne({hobbies:/^d/i},{$set:{"hobbies.$":"coding"}})
+
+db.employee.updateOne({hobbies:/^h/i},{$set:{"hobbies.$":"coding"}})
+
+Update all the elements of array:
+db.employee.updateOne({hobbies:/^h/i},{$set:{"hobbies.$[]":"coding"}})
+
+db.employee.updateOne({empId:102},{$set:{"hobbies.0":"singing"}})
+
+delete operations:
+db.employee.deleteOne({empId:101})
+db.employee.deleteMany({salary:{$gt:1000,$lt:5000}})
+
+db.employee.deleteMany({empName:/^s/})
+
+db.employee.deleteMany({"hobbies.0":"coding"})
+
+
+
+
+aggregate operators: One of the Best features of mongodb
+
+select max(salary) as "Maximum Salary" from employee
+
+select deptId,max(salary) as "Maximum Salary" from employee group by deptId
+
+select deptId,max(salary) as "Maximum Salary" from employee 
+where salary >1000 group by deptid having sum(salary)> 5000
+
+Execution plan:
+1.from employee
+2.where condition
+3. group by
+4. having clause
+5. select clause
+
+Mongodb -- Aggregation pipeline:
+Consists of many stages (1 to n stages)
+Output of first stage will become the input of second stages
+At each stage -- data will be manipulated; fields, documents;
+
+select max(salary) as "Maximum Salary" from employee
+
+1. from employee
+2. find the max(salary) -- group by no column
+
+
+db.employee.aggregate([
+{
+	$group:{
+  	_id:null,
+    "Maximum Salary":{$max: "$salary"}
+  }
+}
+])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
