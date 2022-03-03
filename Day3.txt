@@ -1,0 +1,352 @@
+select sum(pop) as SumOfPop, state from zipcode group by state
+
+db.zipcode.aggregate([{$group: {
+ _id: '$state',
+ 'Sum Of Population': {
+  $sum: '$pop'
+ },
+ AveragePopl: {
+  $avg: '$pop'
+ },
+ 'Maximum Popl': {
+  $max: '$pop'
+ }
+}}, {$project: {
+ 'Sum Of Population': 1,
+ 'Maximum Popl': 1,
+ 'Average Pop': {
+  $round: [
+   '$AveragePopl',
+   2
+  ]
+ },
+ State: '$_id',
+ _id: 0
+}}])
+
+select sum(pop) from zipcode group by state,city
+group by state;
+Within each group, group by city
+sum(pop) for each group
+
+
+
+db.zipcode.aggregate([
+{
+	$group:
+	{
+		_id:{f1:"$state",f2:"$city"},
+    "SumOfPop":{$sum:"$pop"}
+	}
+},
+{
+	$project:
+	{
+  	"SumOfPop":1,
+    "State":"$_id.f1",
+    "City":"$_id.f2",
+    "_id":0
+  }
+}
+])
+
+
+select sum(pop) from zipcode where pop >1000 group by state,city
+1.where
+2. group bt state; group by city
+3. sum(pop)
+
+db.zipcode.aggregate([
+{$match: {
+  pop:{$gt:1000}
+}}, 
+{$group: {
+  _id: {f1:"$state",f2:"$city"},
+  "SumOfPop": {
+    $sum: "$pop"
+  }
+}},
+{$project: {
+  "SumOfPop":1,
+  "State":"$_id.f1",
+  "City":"$_id.f2",
+  _id:0
+
+  }}])
+
+
+
+
+select sum(pop) from zipcode where pop >1000 group by state,city having sum(pop) > 10000
+1. where clause -- match stage
+2. group by -- group stage
+3. having clause -- match stage
+4. select clause -- project stage
+
+db.zipcode.aggregate([
+{$match: {
+  pop:{$gt:1000}
+}},
+{$group: {
+  _id: {f1:"$state",f2:"$city"},
+  "SumOfPop": {
+    $sum: "$pop"
+  }
+}},
+{$match: {
+  SumOfPop:{$gt:10000}
+}},
+{$project: {
+  "SumOfPop":1,
+  "State":"$_id.f1",
+  "City":"$_id.f2",
+  _id:0
+
+  }}])
+  
+  
+
+
+select sum(pop) from zipcode where pop >1000 group by state,city 
+having sum(pop) > 10000 order by 1
+
+1. where clause -- match stage
+2. group by -- group stage
+3. having clause -- match stage
+4. sort -- 
+5. select clause -- project stage
+
+[{$match: {
+  pop:{$gt:1000}
+}}, {$group: {
+  _id: {f1:"$state",f2:"$city"},
+  "SumOfPop": {
+    $sum: "$pop"
+  }
+}}, {$match: {
+  SumOfPop:{$gt:10000}
+}}, {$sort: {
+  SumOfPop: -1
+}}, {$project: {
+  "SumOfPop":1,
+  "State":"$_id.f1",
+  "City":"$_id.f2",
+  _id:0
+
+  }}]
+  
+  
+  Find the number of restaurants serving the Bakery cuisine
+  {
+  cuisine:"Bakery",
+  "Number Of Rest":_____
+  }
+  3 stages: $match,$group,
+  $match, $count
+  
+  [{$match: {
+  cuisine:"Bakery"
+}},
+{$count: 'Number of restaurants'}, {$project: {
+  'Number of restaurants':1,
+  "cuisine":"Bakery"
+}}]
+
+For each cuisine, display the number of restaurants serving it
+select count(*) from restaurant group by cuisine
+group stage
+
+
+db.Illuri.insertMany([{empId:101,empName:"Sara",projectId:"P101"},
+{empId:102,empName:"Keshav",projectId:"P101"},
+{empId:103,empName:"Saurabh",projectId:"P102"},
+{empId:104,empName:"Giri",projectId:"P102"},
+{empId:105,empName:"Saraansh",projectId:"P103"},
+{empId:106,empName:"Piyush",projectId:"P104"},
+{empId:107,empName:"Neha",projectId:"P104"},
+{empId:108,empName:"Priyam",projectId:"P105"},
+{empId:109,empName:"Pranav",projectId:"P105"},
+{empId:110,empName:"Puja",projectId:"P104"}]
+)
+
+
+
+
+db.projects.insertMany([{projectId:"P101",projectName:"Store Front",projectDescription:"E Commerce Application"},
+{projectId:"P102",projectName:"CueBack",projectDescription:"Social Networking"},
+{projectId:"P103",projectName:"Premium Access",projectDescription:"Digital Course Library"},
+{projectId:"P104",projectName:"Freegal Music",projectDescription:"Libary of Songs"},
+{projectId:"P105",projectName:"Comlink Data",projectDescription:"Data Science"}])
+
+Left outer join: -- lookup stage
+
+select * from employee left outer join projects on employee.projectId=projects.projectId
+Mongodb -- lookup stage:
+db.employee.aggregate([{$lookup: {
+  from: 'projects',
+  localField: 'projectId',
+  foreignField: 'projectId',
+  as: 'projectDetails'
+}}])
+
+Specify:
+2 collections
+fields in both the collection which will be used for the join
+where the joined data should be displayed
+
+db.projects.aggregate([{$lookup: {
+  from: 'employee',
+  localField: 'projectId',
+  foreignField: 'projectId',
+  as: 'Employee Details'
+}}])
+
+
+unwind stage:
+Always performed on an array
+
+Break up array and each array element becomes a seperate document
+db.restaurant.aggregate(
+[{$unwind: {
+  path: "$grades",
+
+ }},
+ {$group: {
+  _id: "$name",
+  "SumOfScores": {
+    $sum: "$grades.score"
+  }
+}}])
+
+Sort the rest based on grades score
+
+For the state MA, find the city which has got the max pop
+
+db.zipcode.aggregate([
+{$match: {
+  state:"MA"
+}},
+{$group: {
+  _id: {f1:"$state",f2:"$city"},
+  "SumOfPop": {
+    $sum: "$pop"
+  }
+}},
+{$sort: {
+  "SumOfPop": -1
+}},
+{$limit: 1}, 
+{$project: {
+  State:"$_id.f1",
+  City:"$_id.f2",
+  "SumOfPop":1,
+  _id:1
+}}])
+
+
+Types of indexes in RDBMS:
+single index: index on a single field
+complex index: index on multiple columns;
+
+Mongodb - btree index
+
+Single index or simple index: Index on a single field
+
+String
+Number
+Array
+Object
+Nested field
+Date
+
+compound index -- index on multiple fields
+
+db.zipcode.createIndex({state:1,city:-1},{name:"state_1_city_-1"})
+
+based on a condition
+
+Text index
+Geospatial index -- index on geospatial index
+
+Unique index
+
+TTL index -- total time to live index
+
+
+front end --> request(2 sec) --> server --> request(2 sec) --> db 
+--> db execute the query (20/5 sec)
+--> result has gone to server(2 sec) --> server manipulate the data(2 sec)
+--> go back to the front end(2 sec)
+
+30 sec after pressing the button will get the result
+
+Optimise the time for query execution -- fasten the query -- creating the index
+
+db.zipcode.createIndex({city:1})
+
+db.zipcode.getIndexes()
+
+Can 2 indexes be created on same field with only the sort order being different
+	-- yes; 
+  logically is it meaningful -- NO
+  -- wasting memory; slow dow the operations(insert, update)-- because 2 indexes have to be maintained
+
+Can another index be created on _id field 
+	-- NO
+  logically -- meaningless
+  
+
+
+db.zipcode.find({state:"MA"}) -- which index will it use (asc or desc)
+
+db.zipcode.find({state:"MA"}).sort({city:1}) -- use state index:
+1. find on state
+2. sort the results of find and using the city field
+
+Make use state index
+n- 29353
+x <=n
+Result set -- 474 docs on which sorting has to be applied
+
+sort x docs (subset) manually ; n docs are only sorted in asc order
+
+
+Can we have a compound index on  field -- NO
+
+compound index
+1. string ,number
+2. string,array
+3. string, object
+4, object,object
+5. object,nested field
+
+Properties : Index:
+Unique
+Sparse
+
+1. Unique: 
+Index which will not allow duplicate values
+
+db.restaurant.createIndex({restaurant_id:1},{unique:true})
+Pls remember there is a unique index on restaurant_id
+1. Can i have 2 indexes on same field with one being normal index and the other being a unique index
+  Yes -- provided the sort orders are different
+  
+2. Can i insert a null value for the restaurant_id -- yes
+3. Can i insert a doc with restaurant_id missing -- yes
+4. Can i have multiple null values -- no
+5. Can i insert multiple docs with restaurant_id missing -- no
+
+Allow only one null or one missing field
+
+
+Sparse Index: will be created only on those docs for which the field exists
+
+Oracle: 
+
+
+
+
+
+
+
