@@ -1,0 +1,395 @@
+Partial Index:
+
+Index created only on some of the docs;
+Satisfy a particular criteria 
+
+db.restaurant.createIndex({cuisine:1},{partialFilterExpression:{"cuisine":"Bakery"}})
+
+Can a create a partial index on a particular field with PFE on a different field -- yes
+
+Difference partial index and sparse index:
+Sparse Index: Index built on only those docs for which field exists
+
+db.restaurant.createIndex({restaurant_id:1},{sparse:true})
+
+db.restaurant.createIndex({restaurant_id:1},
+{partialFilterExpression:{"restaurant_id":{$exists:true}}})
+
+db.restaurant.createIndex({restaurant_id:1},
+{partialFilterExpression:{"restaurant_id":{$gt:45678}}})
+
+TTL index:
+maintain the logs -- 1 day, 30 days, 90 days
+After 30days: rotate the logs -- remove the old logs which are more than 30 days
+Script -- automate that script
+
+TTL index -- expiry date:
+Doc field: dateOfCreation -- beyond the expiry date -- delete the doc automatically
+TTl index built on date field or an array which consists of date field
+
+db.sample.createIndex({dateOfCreation:1},{expireAfterSeconds:100})
+Use cases :
+Login data
+Session data
+Logs Info
+
+Hash Index:
+Instead of creating the index on original value, the hashed values will be used
+
+EmpId: 1 to 10000 randomly -- normal single index
+Insertion 100 docs with empId all in the range 2000 to 3000
+Left binary tree will become very huge 
+
+Reads between 2000 to 3000 -- left binary tree is read
+data is not evenly distributed
+
+Hash index : value -- hash algorithm -- index created on hashed values
+-- more even distribution 
+
+reads -- value -- hashed value -- for comparison
+
+db.zipcode.createIndex({restaurant_id:"hashed"})
+
+Hashed index -- simple or compound
+hashed index cannot be unique
+
+Text index:
+search for apple:
+apple fruit
+apple iphone
+apple ipad
+apple imac
+
+search in decription,name for word apple -- give us the result set
+
+Text index on name:
+single name in one doc --"Morris Park bake shop"  -- 4 index entries
+"Dj Reynolds Pub And Restaurant"
+Index entries : Morris; Park; bake; shop; Dj; Reynolds; PUB; Restaurant; 
+
+1. Index very huge :index entry for every word
+2. Search is little slower : pub; index entries are not sorted; traversal is not very clear
+3. One collection -- one text index
+4. Text index -- single field/ multiple fields
+5. Text index -- give some weightage
+
+Text index on 2 fields : name and description -- same weightage
+
+Text index on 2 fields : name -- 2 and description  --1 -- different weightage
+
+{rest_id:101,name:"Morris park bake shop", description:"A beautiful bake shop with everything u need wrt to bake related items"}
+{rest_id:102,name:"Bake shop with a bake in place", description:""One stop solution for all the bake needs}
+
+find for "bake":
+
+101 -- score : 1*2 + (2*1)= 4
+102 -- score : 2*2 +(1*1) = 5
+
+Can an index be modified : No; drop the index and recreate the index
+expireAfterseconds -- modified
+
+
+Replication: store same data in different servers
+
+Sync of data between various servers -- consistency 
+What will happen if one of servers down
+Automatic failover
+
+one Primary server; multiple secondary servers
+Data -- primary server
+secondary servers -- replicate the data in the primary server
+
+reads/ writes -- > default only to primary
+
+primary -- read op --> give the result set
+write op --> primary --> 
+2 tasks 
+1. perform the write op on its own data
+2. make a log of write op in its oplog file
+
+secondary servers will asynchronously copy the oplog of primary to their respy oplogs
+and do the same operation on data  which it holds
+
+If needed -- secondaries can also handle reads
+
+Limitation -- before the async sync, there is a chance to read stale data
+
+Replication -- eventual consistency
+
+Server goes down:
+
+10 node architecture -- 1 primary server; 9 secondary servers
+Secondary server goes down: 1 P; 8S -- alive -- reads may get very affected very little; writes will not get affected
+
+Primary goes down: reads may happen(from sec) ; writes may not happen
+
+one of the secondary -- will become the primary
+
+election process:
+Vote power
+Who all can become a primary
+
+
+Amit Shah can become the PM (highest power after Modi)
+Amit Shah is also not avialable
+Yogi , Nirmala Sitharaman -- same power
+
+within BJP -- MP's vote for PM: common man vote -- no
+select the PM ;
+
+mongodb 
+
+once primary goes down
+election process starts
+secondary with the highest priority becomes the primary
+
+multiple secondaries with the same priority -- one who has already been the primary in the past
+
+there are multiple secondaries which have been primary in the past: voting process -- eligible voting members will vote and select the primary
+
+there may be a tie --Arbiter will break the tie --if no arbiter round robin process -- one of eligible sec will become primary
+
+Time allotted for election process -- 12 seconds
+
+Server -- Priority:1(default); Vote:1 or 0
+
+Replica set -- 50 members ; only 7 voting members
+
+How to find out if a server down:
+Each server in replica set will exchange a heart beat with other server everyy 2 sec
+If for 10 sec, there is no heart beat from a particular server is not there, it means that server is down
+
+Writes failing max --(12 sec)
+Device drivers -- automatic retry 
+
+
+PSSSS architecture -- 5 member replica set 
+
+write operation -- write concern
+
+write concern : 1, 2, 3, 4,5,all,majority
+
+db.employee.insertOne({empId:101,empName:"sara"})
+
+write concern :1
+Only 1 server has to complete the operation to give the acknowledgement back:
+Primary completes the write op; the acknowledgement will be sent to client
+
+write concern :2
+2 servers have to complete the operation to give the acknowledgement back:
+Primary, one of secondaries completes the write op; the acknowledgement will be sent to client
+
+write concern: majority : most used value
+In 5 member replica set -- majority : 3
+3 servers have to complete the operation to give the acknowledgement back:
+Primary, two of secondaries completes the write op; the acknowledgement will be sent to client
+
+write concern : 5
+5 servers have to complete the operation to give the acknowledgement back:
+Primary, four of secondaries completes the write op; the acknowledgement will be sent to client
+Time for all 5 to complete ;
+One of the secondaries is down -- write op will fail
+write timeout is over -- write operation is fail
+
+
+Best practice : write concern : majority
+If write concern :1 ; only primary writes; ack sent; before any secondary could sync, the primary goes down ; data is not replicated ; data is lost;
+write concern : all : time; one node fails -- writes will not happen
+consistency take less time to acheive 
+
+
+9 member replica set : 
+
+write concern:2
+2 of 9 servers have completed; 7/9 have to sync; read op for the same data 
+read: probabality of stale data : 7/9
+
+write concern : majority
+5 nodes have finished the write 
+read: probabality of stale data : 4/9
+
+Types of secondary servers:
+1. Normal secondary server: vote : 0 or 1; priority : >0
+2. Arbiter -- special secondary server 
+	-- not going to replicate the data; will not hold any data
+  -- during the election process
+  -- breaking the tie during the election process
+  -- minimum configuration(hardware)
+  -- One arbiter in a replica set
+  -- Vote -- 1
+  -- Priority -- 0 ; Should never become the primary
+  
+3. Zero priority secondary member
+	-- Vote 0 or 1
+	-- Priority -- 0 ; Should never become the primary
+  -- Use case: 
+  Distributed environment 
+  -- Replica members will be in diff physical locations
+  -- Replica member in Jammu; should never become the primary
+  
+4. Hidden secondary member
+	-- Vote 0 or 1
+  -- Priority : 0; Should never become the primary
+  -- Replicate the data; sync with the primary
+  -- Hidden from the client
+  -- Reads also will not be sent to this particular hidden secondary 
+  -- Generating reports, creating back ups of data
+  -- Can be 0 or many
+
+5. Delayed secondary member
+	-- Getting back deleted data; doing a undo of insertion of malicious data
+  -- Sync with the primary after the delay(configured)
+  -- Should it handle reads from the client-- stale data (sure) -- no
+  -- By default -- hidden
+  -- Vote : 0 or 1
+  -- Priority: 0
+  
+  Nodes n1 -- n5
+  
+  1. What happens?  a primary(n1) goes down ; Another eligible sec node(n2) has become primary
+  client write op-- successful
+  Now n1 comes up ?? will n2 continue as primary or n1 will become primary
+  
+  n2 will continue as primary and n1-- secondary(primary preferred node)
+  
+  Later when n2 goes down ; there is a high probability that n1 may become a primary
+  
+Standalone server 27017 -- c:/data/db
+3 member replica set
+
+Port 1101,1102,1103
+Data : data1,data2,data3
+Replset : cgrs1
+PSS
+
+In a new cmd prompt from the bin folder
+mongod --port 1101 --replSet cgrs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\replication\data1"
+
+In a new cmd prompt from the bin folder
+mongod --port 1102 --replSet cgrs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\replication\data2"
+
+In a new cmd prompt from the bin folder
+mongod --port 1103 --replSet cgrs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\replication\data3"
+
+In a new cmd prompt from the bin folder
+mongo --port 1101
+
+Initiaite the replica set
+rs.initiate({
+_id:"cgrs1",
+members:[
+{_id:0,host:"localhost:1101"},
+{_id:1,host:"localhost:1102"},
+{_id:2,host:"localhost:1103"}
+]
+})  
+
+3 servers : vote :1(default); priority: 1(default)
+
+use replicaDb
+db.books.insertOne({bookid:101,bookName:"Alchemist"})
+
+db.books.find()
+
+Add an arbiter to my replica set
+1. In a cmd prompt from the bin folder
+mongod --port 1104 --replSet cgrs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\replication\data4"
+
+2. Connect to the primary server
+mongo --port 1101
+
+3. Add arbiter to the rs:
+rs.addArb("localhost:1104")
+
+Add a new member with a priority:10, votes:1
+mongod --port 1105 --replSet cgrs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\replication\data5"
+
+Connect to the primary
+mongo --port 1101
+
+rs.add({host:"localhost:1105",priority:10,votes:1})
+
+when all will elections happen
+1. when the replica set is initialted for the first time
+2. when the primary goes down
+3. when a new member is added and it has the highest priority
+4. whenever the replica set is reconfigured
+
+Make a secondary go down
+
+Make the primary go down
+2 ways
+1. shut down the primary
+2. rs.stepDown()
+
+Add a zero priority member to the replica set:
+mongod --port 1106 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\replication\data6" --replSet cgrs1
+
+Connect to the primary:
+
+mongo --port 1101
+
+rs.add({host:"localhost:1106",priority:0})
+
+Change the priority of 1102 to 15
+var myConfig = rs.config()
+myConfig.members[1].priority=15
+rs.reconfig(myConfig)
+
+
+
+
+
+  
+  
+  
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
