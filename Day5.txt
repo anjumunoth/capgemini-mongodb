@@ -1,0 +1,377 @@
+Add a hidden member
+
+Open a new cmd from the bin folder
+mongod --port 1107 --replSet cgrs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\replication\data7"
+
+Connect to the primary
+mongo --port 1102
+
+rs.add({host:"localhost:1107",priority:0,hidden:true})
+
+rs.secondaryOk() -- secondary can handle the reads
+
+Read preference 
+1. primary -- reads will be directed to the primary only
+2. secondary -- reads will be directed to the primary and secondary
+3. primary preferred -- first reads send to the primary; if primary is not available , then it would be sent to the secondaries
+4. secondary preferred --first reads send to the secondaries; if none of the secondaries are available , then it would be sent to primary
+5. nearest -- server which to the nearest(primary to secondary)
+
+
+Delayed member
+Sync with the primary after a delay of 5 min(300 secs)
+
+mongod --port 1008 --replSet cgrs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\replication\data8"
+
+Connect to the primary
+mongo --port 1102
+
+rs.add({host:"localhost:1108",slaveDelay:300,priority:0})
+
+Initial sync with the primary will happen.
+
+
+Sharding:
+break up the data and store it in different servers
+Excel : drives and folders
+Different drives
+
+
+data(different drives/ different folders)
+meta information (excel file)
+shard key : key on basis of which data is broken
+
+shard key : range based, hash based
+
+Range based shard key : empId
+Employee info with empId 0 to 10000
+
+4 shards -- 4 shard servers
+
+shard -- one of servers which will hold the partition of data
+shard -- will be always be a replica set
+
+All the shards are required for complete data; availability
+
+config server -- server used for storing the meta info 
+-- should also be a replice set
+shard and chunk information
+shard key will always be sorted
+
+shard1 -- 0 to 2499 5 chunks : 500 docs
+shard2 -- 2500 to 4999
+shard3 -- 5000 to 7499
+shard4 -- 7500 to 10000
+
+folders -- chunk
+Each and every shard will have multiple chunks
+One chunk can have 1 or more documents
+chunk size: 64mb(configurable)
+
+mongos -- stateless router ; 
+multiple routers
+client will not talk directly with the shards or config server
+
+client -- request(read) -- mongos -- sent it to the config server 
+-- return the meta info  about where the data is present (which shard and which chunk within that shard)
+-- once mongos gets the meta info -- send the query to the respy shard and respy chunk and get the info
+-- mongod has got the data -- return it to the client
+
+db.emp.find({empId:1001})
+
+client --> read --> mongos --> send to config server -->shard1 and chunk3--> sent to mongos
+--> contact shard1 and give me doc with empId 1001 in chunk3
+--> shard1 will return the data --> mongos will return data to the client
+
+db.emp.find({empId:{$gt:2000,$lt:3000}})
+
+client --> read --> mongos --> config server --> shard1(chunk 4,chunk5) and shard2(chunk 1 and chunk2)
+--> mongos --> contact shard1, shard2 and get the req docs --> return it to the client
+
+db.emp.find({salary:1000})
+client --> read --> mongos --> query is not on the shard key --> will not talk to the config server
+-->broadcast the query to all the shards -- shards will return the data
+--> mongos merge the data and send it to the client
+
+Time to execute the query: 
+Query on basis of a non shard key : slower 
+
+When should sharding be done
+1. when my data is very huge and its not possible to store in a single server
+2. When major of queries are based on a single field and that field is there in every doc
+fasten my query
+
+
+When sharding should not be done:
+1. Queries are based on multiple fields which are not based on shard key
+Shard key: empId
+
+30% queries -- empId
+30% queriies -- salary
+30% -- deptId
+10% -- 
+Should i shard the emp collection or not ?? no
+shard key -- 30%
+non shard key -- 70%
+
+execution time -- 30% queries fast;
+70% queries time greater than if they were not sharded
+
+
+
+Imp things to remember :
+1. Sharding cannot be revoked or rollbacked
+2. Shard key selection : shard key cannot be changed (add a new field to an existing shard key)
+Initial : emp empId,empName,salary,deptId
+Add a new filed to all the doc s in the collection:aadhaadCardNumber:
+queries:
+30% -- empId
+50% -- aadhaarCardNumber
+20% -- deptId,salary,empName
+ Initial shard key : empId
+ update the shard key : compound key : empId,aadhaarCardNumber
+3. Shard key selection -- imp ; queries execution speed
+
+chunk -- default 64mb
+
+20 docs where each doc 10 mb
+
+chunk1 -- 7 docs size : 70 mb
+chunk2 -- 6 docs
+chunk3 -- 16 docs
+chunk4 -- 1 docs
+
+70mb > default size
+auto splitting happens:
+chunk1 -- broken into 2 diff chunks 
+chunk1 -- 3 docs 
+chunk5 -- 4 docs
+
+chunk size -- 15mb
+20docs each of 10mb
+chunks -- 20 chunks
+
+
+chunk size -- 120 mb
+2 chunks
+
+chunk size -- 5mb
+20 docs where each doc of 10 mb size
+each chunk -- can only one doc -- indivisible chunk
+
+
+3 shards
+Scenario1 : 4 chunks
+shard1 - 2 chunk;shard2 - 1 chunk; shard3 - 1chunk
+
+Scenario2 : 20 chunks -- migrations will be many
+shard1 - 6 chunk;shard2 - 7 chunk; shard3 - 7chunk
+
+Scenario 3: 2 chunks
+shard1 - 1 chunk; shard2 - 1 chunk ;
+lesser number of migrartion
+queries are going to go to only particular shards
+
+chunk migrations -- balance will migrated from one shard to another shard
+1. unequal number of chunks in the various shards
+2. new shard added
+3. existing shard removed
+
+
+Shards : 3
+number of chunks: 20
+
+manual splitting of chunks
+shard1 - 7 chunks
+shard2 - 12 chunks
+shard3 - 1 chunk
+
+migrations will be done by balancer:
+migrate 6 chunks from shard2 to shard3
+s1- 7
+s2 - 6
+s3-7
+
+Shards:4
+chunks : 60
+Initial config:
+s1:25
+s2: 5
+s3:15
+s4:15
+
+migrate 11 from s1 to s2
+s1-14
+s2-16
+s3:15
+s4:15
+
+
+Sharding:
+2 shards 
+Each shard replica set
+
+Shard1:
+PSS
+
+mongod --shardsvr --port 2101 --replSet s1rs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\sharding\data1"
+
+mongod --shardsvr --port 2102 --replSet s1rs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\sharding\data2"
+
+mongod --shardsvr --port 2103 --replSet s1rs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\sharding\data3"
+
+Connect to one of the above servers
+
+mongo --port 2101
+
+Initiate the replica set
+
+rs.initiate({
+_id:"s1rs1",
+members:[
+{_id:0,host:"localhost:2101"},
+{_id:1,host:"localhost:2102"},
+{_id:2,host:"localhost:2103"}
+]
+})
+
+
+
+Shard2:
+PSS
+
+mongod --shardsvr --port 2201 --replSet s2rs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\sharding\data4"
+
+mongod --shardsvr --port 2202 --replSet s2rs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\sharding\data5"
+
+mongod --shardsvr --port 2203 --replSet s2rs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\sharding\data6"
+
+Connect to one of the above servers
+
+mongo --port 2201
+
+Initiate the replica set
+
+rs.initiate({
+_id:"s2rs1",
+members:[
+{_id:0,host:"localhost:2201"},
+{_id:1,host:"localhost:2202"},
+{_id:2,host:"localhost:2203"}
+]
+})
+
+Config server:
+PSS
+
+mongod --configsvr --port 2301 --replSet crs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\sharding\data7"
+
+mongod --configsvr --port 2302 --replSet crs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\sharding\data8"
+mongod --configsvr --port 2303 --replSet crs1 --dbpath "C:\Users\anjum\OneDrive\Desktop\capgemini-mongodb\sharding\data9"
+Connect to one of the above servers
+
+mongo --port 2301
+
+Initiate the replica set
+
+rs.initiate({
+_id:"crs1",
+members:[
+{_id:0,host:"localhost:2301"},
+{_id:1,host:"localhost:2302"},
+{_id:2,host:"localhost:2303"}
+]
+})
+
+Now we have to set up mongos 
+Open a new cmd prompt from the bin folder
+mongos --port 2401 --configdb crs1/localhost:2301
+
+Now we have to connect to mongos
+In a new command prompt from the bin folder
+mongo --port 2401
+
+We should get mongos as part of the terminal
+Add the shard server to mongos router
+mongos>
+sh.addShard("s1rs1/localhost:2101")
+mongos>
+sh.addShard("s2rs1/localhost:2201")
+
+Architecture set up is done
+
+Create the db and create the collection
+
+use shardingDb
+db.emp.insertOne({empId:101,empName:"sara"})
+
+Enable sharding at a database level
+
+sh.enableSharding("shardingDb")
+
+Shard the zipcode collection
+Select the shard key
+
+1. shard key should be present in all the documents
+2. shard key -- range based or hashed
+3. queries -- majority of queries should be on shard key
+4. cardinality and frequency
+5. shard key cannot be on an array 
+
+state as shard key
+db.zipcode.createIndex({state:1})
+
+sh.shardCollection("shardingDb.zipcode",{state:1})
+
+sh.shardCollection("shardingDb.zipcode",{state:hashed})
+
+Manual splitting:
+
+Split into 2 equal chunks using splitFind
+sh.splitFind("shardingDb.zipcode",{state:"MA"})
+
+sh.splitFind("shardingDb.zipcode",{state:"NH"})
+
+
+splitAt: split at a particular value
+sh.splitAt("shardingDb.zipcode",{state:"ME"})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
