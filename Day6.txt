@@ -1,0 +1,88 @@
+https://tcheck.co/nNS6rd
+
+https://www.mongodb.com/try/download/database-tools?tck=docs_databasetools&_ga=2.208111506.1860853534.1646628344-1473127977.1622639137
+
+Gridfs: store and retrieve 
+1. Images, videos
+2. BSON doc size -- 16mb
+
+
+Gridfs
+chunks -- 255kb
+data is stored in form of chunks
+meta info 
+Collections -- 
+coll- file chunks
+coll -- chunks
+
+Open a cmd prompt from the bin folder of the TOOLs
+
+mongofiles -d capgeminiDb put "img path"
+
+mongofiles -d capgeminiDb get "img path"
+
+Import -- csv or json 
+
+mongoimport -d capgeminiDb -c rest --file "C:\Users\anjum\OneDrive\Desktop\MyMaterial\Laptop\mongodb\retaurants\restaurants.json"
+
+mongoimport -d capgeminiDb -c rest --file "C:\Users\anjum\OneDrive\Desktop\MyMaterial\Laptop\mongodb\retaurants\restaurants.json" --upsert --jsonArray
+
+mongoimport -d capgeminiDb -c zipcode1 --file "C:\Users\anjum\OneDrive\Desktop\zipcode.csv" --type CSV --headerline
+
+mongoexport -d capgeminiDb -c restaurant --out "C:\Users\anjum\OneDrive\Desktop\rest_exported.json"
+
+mongoexport -d capgeminiDb -c restaurant --out "C:\Users\anjum\OneDrive\Desktop\rest_exported_csv.csv" --type CSV --fields name,cuisine
+
+mongodump
+
+mongodump -d capgeminiDb --out "C:\Users\anjum\OneDrive\Desktop"
+
+mongorestore -d capgeminiDb "C:\Users\anjum\OneDrive\Desktop\capgeminiDb"
+
+savepoints and rollback
+
+rollback -- rollback to the last commit
+
+rollback to a particular savepoint
+
+
+
+Authentication:
+
+Start a mongod process
+Start the mongo shell
+use admin
+Create the first user:
+db.createUser(
+  {    user: "myUserAdmin",
+    pwd: passwordPrompt(), // or cleartext password
+    roles: [ { role: "userAdminAnyDatabase", db: "admin" }, "readWriteAnyDatabase" ]	  })
+
+
+Restart the server with --auth
+mongod --auth
+
+mongo
+use admin
+db.auth("myUserAdmin", passwordPrompt()) // or cleartext password
+
+Approach 2:
+mongo -u "myUserAdmin" --authenticationDatabase "admin" -p
+
+
+Create some users
+use capgeminiDb
+db.createUser(
+  {
+    user: "myTester",
+    pwd:  passwordPrompt(),   // or cleartext password
+    roles: [ { role: "readWrite", db: "capgeminiDb" },
+             { role: "read", db: "mopDb" } ]
+  })
+  
+mongo -u "myTester" --authenticationDatabase "capgeminiDb" -p
+
+
+
+
+
